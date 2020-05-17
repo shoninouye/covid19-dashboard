@@ -17,17 +17,17 @@ shinyServer(function(input, output) {
   output$global_cases_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_global_total$total_cases), 
                             style = "font-size: 150%;"), 
-             subtitle = "Current cummulative cases")
+             subtitle = "Current cumulative cases")
   })
   output$global_deaths_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_global_total$total_deaths), 
                             style = "font-size: 150%;"), 
-             subtitle = "Current cummulative deaths")
+             subtitle = "Current cumulative deaths")
   })
   output$global_recovered_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_global_total$total_recovered), 
                             style = "font-size: 150%;"), 
-             subtitle = "Current cummulative recoveries")
+             subtitle = "Current cumulative recoveries")
   })
   
   # Global country/region cases, deaths, and recoveries
@@ -145,12 +145,12 @@ shinyServer(function(input, output) {
   output$us_cases_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_us_total$total_cases), 
                             style = "font-size: 150%;"), 
-             subtitle = "Current cummulative cases")
+             subtitle = "Current cumulative cases")
   })
   output$us_deaths_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_us_total$total_deaths), 
                             style = "font-size: 150%;"), 
-             subtitle = "Current cummulative deaths")
+             subtitle = "Current cumulative deaths")
   })
   
   # US state cases, deaths, and recoveries
