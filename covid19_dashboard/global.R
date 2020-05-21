@@ -31,6 +31,8 @@ convert_covid_long <- function(data, col_name) {
                  values_to = col_name)
 }
 
+# Global - Data ---------------------------------------------------------------------
+
 # Convert covid19 data to long format
 global_cases_long <- convert_covid_long(covid19_global_cases, "confirmed_cases")
 global_deaths_long <- convert_covid_long(covid19_global_deaths, "confirmed_deaths")
@@ -40,17 +42,33 @@ global_recovered_long <- convert_covid_long(covid19_global_recovered, "confirmed
 covid19_global_full <- global_cases_long %>% 
   full_join(global_deaths_long) %>% 
   full_join(global_recovered_long) %>% 
-  mutate(date = mdy(date))
+  mutate(date = mdy(date),
+         # Make edits to regions names for geo joining 
+         country_region = case_when(country_region == "Brunei" ~ "Brunei Darussalam",
+                                    country_region == "Cote d'Ivoire" ~ "Côte d'Ivoire",
+                                    country_region == "Czechia" ~ "Czech Republic",
+                                    country_region == "Korea, South" ~ "Republic of Korea",
+                                    country_region == "Laos" ~ "Lao PDR",
+                                    country_region == "North Macedonia" ~ "Macedonia",
+                                    country_region == "Russia" ~ "Russian Federation",
+                                    country_region == "Taiwan*" ~ "Taiwan",
+                                    country_region == "US" ~ "United States",
+                                    country_region == "West Bank and Gaza" ~ "Palestine",
+                                    # New names
+                                    country_region == "Burma" ~ "Myanmar", 
+                                    country_region == "Congo (Brazzaville)" ~ "Republic of Congo",
+                                    country_region == "Congo (Kinshasa)" ~ "Democratic Republic of the Congo",
+                                    # Greenland overrules denmark for geographic location
+                                    province_state == "Greenland" ~ "Greenland",
+                                    TRUE ~ country_region)
+         ) 
 
-### Dashboard V1
 # Total cases/deaths/recovered over time
 covid19_sum <- covid19_global_full %>% 
   group_by(date) %>% 
   summarize(sum_cases = sum(confirmed_cases, na.rm = TRUE),
             sum_deaths = sum(confirmed_deaths, na.rm = TRUE),
             sum_recovered = sum(confirmed_recovered, na.rm = TRUE)) 
-
-
 
 # List of confirmed cases/deaths/recovered by country/region
 covid19_global_current <- covid19_global_full %>% 
@@ -68,24 +86,13 @@ covid19_global_total <- covid19_global_current %>%
             total_deaths = sum(current_deaths, na.rm = TRUE),
             total_recovered = sum(current_recovered, na.rm = TRUE))
 
-### Map - global
-# Global Map
-covid19_global_current <- covid19_global_current %>%
-  mutate(country_region = case_when(country_region == "Brunei" ~ "Brunei Darussalam",
-                                    country_region == "Cote d'Ivoire" ~ "Côte d'Ivoire",
-                                    country_region == "Czechia" ~ "Czech Republic",
-                                    country_region == "Korea, South" ~ "Republic of Korea",
-                                    country_region == "Laos" ~ "Lao PDR",
-                                    country_region == "North Macedonia" ~ "Macedonia",
-                                    country_region == "Russia" ~ "Russian Federation",
-                                    country_region == "Taiwan*" ~ "Taiwan",
-                                    country_region == "US" ~ "United States",
-                                    country_region == "West Bank and Gaza" ~ "Palestine",
-                                    TRUE ~ as.character(country_region)))
+### Global - Map ---------------------------------------------------------------------
+
+# Join country data with geo data
 countries <- ne_countries()
 covid19_global_geo <- geo_join(countries, covid19_global_current, "name_long", "country_region")
 
-# PLotly global map - cases
+# * Plotly global map tooltip - cases ------------------------------------------------
 cases_bins <- c(0,100,500,1000,5000,10000,50000,200000,Inf)
 cases_palette <- colorBin(palette = "viridis", 
                       reverse = TRUE,
@@ -98,7 +105,7 @@ cases_text <- paste(
   sep="") %>%
   lapply(htmltools::HTML)
 
-# PLotly global map - deaths
+# * Plotly global map tooltip - deaths ------------------------------------------------------------
 deaths_bins <- c(0,10,50,100,500,1000,5000,10000,100000,Inf)
 deaths_palette <- colorBin(palette = "viridis", 
                           reverse = TRUE,
@@ -111,7 +118,7 @@ deaths_text <- paste(
   sep="") %>%
   lapply(htmltools::HTML)
 
-# PLotly global map - recovered
+# Plotly global map - recovered ------------------------------------------------------------
 recovered_bins <- c(0,10,25,100,250,1000,5000,10000,100000,Inf)
 recovered_palette <- colorBin(palette = "viridis", 
                           reverse = TRUE,
@@ -124,8 +131,8 @@ recovered_text <- paste(
   sep="") %>%
   lapply(htmltools::HTML)
 
-### United States
-# Convert us data to long format
+### US - Data ----------------------------------------------------------------------------
+# Convert US data to long format
 us_cases_long <- covid19_us_cases %>% 
   rename(province_state = Province_State,
          country_region = Country_Region,
@@ -162,12 +169,12 @@ covid19_us_total <- covid19_us_current %>%
   summarize(total_cases = sum(current_cases, na.rm = TRUE),
             total_deaths = sum(current_deaths, na.rm = TRUE))
 
-### US Map
+### US - Map  ------------------------------------------------------------------------
 # Get geo US data
 us_states <- ne_states(country = "United States of America")
 covid19_us_geo <- geo_join(us_states, covid19_us_current, "name", "province_state")
 
-# Tooltip for us cases
+# * Plotly US map tooltip - cases ------------------------------------------------
 us_cases_bins <- c(0,1000,5000,10000,50000,100000,Inf)
 us_cases_palette <- colorBin(palette = "viridis", 
                              reverse = TRUE,
@@ -180,7 +187,7 @@ us_cases_text <- paste(
   sep="") %>%
   lapply(htmltools::HTML)
 
-# Tooltip for us deaths
+# * Plotly US map tooltip - deaths ------------------------------------------------
 us_deaths_bins <- c(0,50,100,500,1000,2500,5000,Inf)
 us_deaths_palette <- colorBin(palette = "viridis", 
                              reverse = TRUE,

@@ -25,7 +25,7 @@ global_tab <- tabPanel("Global Map",
                                     )
                                 ),
                                 br(),
-                                # Country/region data
+                                # Country/region table
                                 box(width = NULL,
                                     tabsetPanel(
                                       tabPanel("Cases", DTOutput("global_cases_df")),
@@ -59,7 +59,7 @@ us_tab <- tabPanel("U.S. Map",
                                     )
                                 ),
                                 br(),
-                                # US state data
+                                # US states table
                                 box(width = NULL,
                                     tabsetPanel(
                                       tabPanel("Cases", DTOutput("us_cases_df")),
@@ -80,6 +80,7 @@ us_tab <- tabPanel("U.S. Map",
 
 # Tab 3: Trends
 trends_tab <- tabPanel("Trends",
+                       # Global metrics over time
                        column(width = 6,
                               h2("Global"),
                               br(), br(), br(), 
@@ -90,12 +91,13 @@ trends_tab <- tabPanel("Trends",
                               )
                               
                        ),
+                       # US metrics over time
                        column(width = 6,
                               h3("Country/region"),
                               selectInput("region_selection",
                                           "",
                                           choices = distinct(covid19_global_full, country_region),
-                                          selected = "US"),
+                                          selected = "United States"),
                               tabsetPanel(
                                 tabPanel("Cases", plotlyOutput("region_cases_over_time")),
                                 tabPanel("Deaths", plotlyOutput("region_deaths_over_time")),
@@ -107,7 +109,7 @@ trends_tab <- tabPanel("Trends",
 # Tab 4: about
 # about <- 
 
-# Define UI for application that draws a histogram
+# Define UI for each tab/page
 shinyUI(
   navbarPage("COVID-19 Dashboard", theme = shinytheme("flatly"),
              global_tab,

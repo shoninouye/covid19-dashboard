@@ -7,13 +7,11 @@
 #    http://shiny.rstudio.com/
 #
 
-
-
 library(shiny)
 
 shinyServer(function(input, output) {
-  ### Page 1: Global
-  # Global stats
+  ### Tab 1: Global --------------------------------------------------------
+  # * Global static stats --------------------------------------------------------
   output$global_cases_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_global_total$total_cases), 
                             style = "font-size: 150%;"), 
@@ -30,7 +28,7 @@ shinyServer(function(input, output) {
              subtitle = "Current cumulative recoveries")
   })
   
-  # Global country/region cases, deaths, and recoveries
+  # * Global country/region tables -----------------
   output$global_cases_df <- renderDT({
     covid19_global_current %>% 
       select(country_region, Cases = current_cases) %>% 
@@ -53,7 +51,7 @@ shinyServer(function(input, output) {
       rename('Country/region' = country_region)
   })
   
-  ### Leaflet maps
+  # * Global Leaflet maps ----------------------------------------------------------
   # Global map - cases
   output$global_map_cases <- renderLeaflet({
     leaflet(covid19_global_geo) %>% 
@@ -141,7 +139,8 @@ shinyServer(function(input, output) {
                 position = "bottomleft")
   })
   
-  ############ Tab 2 - US Map
+  # Tab 2 - United States --------------------------------------------------------
+  # * US static stats --------------------------------------------------------
   output$us_cases_box <- renderValueBox({
     valueBox(value = tags$p(scales::comma(covid19_us_total$total_cases), 
                             style = "font-size: 150%;"), 
@@ -153,7 +152,7 @@ shinyServer(function(input, output) {
              subtitle = "Current cumulative deaths")
   })
   
-  # US state cases, deaths, and recoveries
+  # * US state tables -----------------------------------------------------------
   output$us_cases_df <- renderDT({
     covid19_us_current %>% 
       select(province_state, Cases = current_cases) %>% 
@@ -169,6 +168,7 @@ shinyServer(function(input, output) {
       rename("State/region" = province_state)
   })
   
+  # * US Leaflet maps -------------------------------------------------------
   # US map - cases
   output$us_map_cases <- renderLeaflet({
     leaflet(covid19_us_geo) %>% 
@@ -219,8 +219,8 @@ shinyServer(function(input, output) {
                 position = "bottomleft")
   })
   
-  ############ Tab 3: Trends
-  # Plotly global cases over time
+  # Tab 3: Trends ------------------------------------------------------------
+  # * Plotly global cases over time ------------------------------------------
   output$global_cases_over_time <- renderPlotly({
       plotly_covid19_sum <- covid19_sum %>% 
       ggplot(aes(x = date, 
@@ -237,7 +237,7 @@ shinyServer(function(input, output) {
       layout(hoverlabel=list(bgcolor="white"))
   })
   
-  # Plotly global deaths over time
+  # * Plotly global deaths over time ------------------------------------------
   output$global_deaths_over_time <- renderPlotly({
     plotly_covid19_sum <- covid19_sum %>% 
       ggplot(aes(x = date, 
@@ -254,7 +254,7 @@ shinyServer(function(input, output) {
       layout(hoverlabel=list(bgcolor="white"))
   })
   
-  # Plotly global recoveries over time
+  # * Plotly global recoveries over time -------------------------------------
   output$global_recovered_over_time <- renderPlotly({
     plotly_covid19_sum <- covid19_sum %>% 
       ggplot(aes(x = date, 
@@ -271,7 +271,7 @@ shinyServer(function(input, output) {
       layout(hoverlabel=list(bgcolor="white"))
   })
   
-  ### Plotly region over time (reactive)
+  # * Plotly region data (reactive) ---------------------------------------
   region_filtered <- reactive({
     covid19_global_full %>% 
       filter(country_region == input$region_selection) %>% 
@@ -280,6 +280,8 @@ shinyServer(function(input, output) {
                 sum_deaths = sum(confirmed_deaths, na.rm = TRUE),
                 sum_recovered = sum(confirmed_recovered, na.rm = TRUE))
   })
+  
+  # * Plotly region cases over time (reactive) ---------------------------------------
   output$region_cases_over_time <- renderPlotly({
     plotly_region <- region_filtered() %>%
       ggplot(aes(x = date, 
@@ -295,6 +297,8 @@ shinyServer(function(input, output) {
     ggplotly(plotly_region, tooltip = "text") %>% 
       layout(hoverlabel=list(bgcolor="white"))
   })
+  
+  # * Plotly region deaths over time (reactive) ---------------------------------------
   output$region_deaths_over_time <- renderPlotly({
     plotly_region <- region_filtered() %>%
       ggplot(aes(x = date, 
@@ -310,6 +314,8 @@ shinyServer(function(input, output) {
     ggplotly(plotly_region, tooltip = "text") %>% 
       layout(hoverlabel=list(bgcolor="white"))
   })
+  
+  # * Plotly region recovered over time (reactive) ---------------------------------------
   output$region_recovered_over_time <- renderPlotly({
     plotly_region <- region_filtered() %>%
       ggplot(aes(x = date, 
