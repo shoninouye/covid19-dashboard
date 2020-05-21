@@ -34,12 +34,29 @@ global_recovered_long <- convert_covid_long(covid19_global_recovered, "confirmed
 covid19_global_full <- global_cases_long %>% 
   full_join(global_deaths_long) %>% 
   full_join(global_recovered_long) %>% 
-  mutate(date = mdy(date))
-covid19_global_full %>% View()
+  mutate(date = mdy(date),
+         ## Make edits to regions names for geo joining 
+         country_region = case_when(country_region == "Brunei" ~ "Brunei Darussalam",
+                                    country_region == "Cote d'Ivoire" ~ "Côte d'Ivoire",
+                                    country_region == "Czechia" ~ "Czech Republic",
+                                    country_region == "Korea, South" ~ "Republic of Korea",
+                                    country_region == "Laos" ~ "Lao PDR",
+                                    country_region == "North Macedonia" ~ "Macedonia",
+                                    country_region == "Russia" ~ "Russian Federation",
+                                    country_region == "Taiwan*" ~ "Taiwan",
+                                    country_region == "US" ~ "United States",
+                                    country_region == "West Bank and Gaza" ~ "Palestine",
+                                    # New names
+                                    country_region == "Burma" ~ "Myanmar", 
+                                    country_region == "Congo (Brazzaville)" ~ "Republic of Congo",
+                                    country_region == "Congo (Kinshasa)" ~ "Democratic Republic of the Congo",
+                                    # Greenland overrules denmark for geographic location
+                                    province_state == "Greenland" ~ "Greenland",
+                                    TRUE ~ country_region)
+         ) 
 
-############ Edits
-# Greenland overrules denmark for geographic location
-#
+global_cases_long %>% View()
+covid19_global_full %>% View()
 
 # covid19_global_full %>% 
 #   filter(country_region == "Canada") %>% View()
@@ -93,13 +110,14 @@ ggplotly(plotly_region, tooltip = "text")
 # List of confirmed cases/deaths/recovered by country/region
 covid19_global_current <- covid19_global_full %>% 
   filter(date == max(date)) %>% 
-  # Greenland should be a region, even tho it is part of denmark 
   group_by(country_region) %>% 
   summarize(current_cases = sum(confirmed_cases, na.rm = TRUE),
             current_deaths = sum(confirmed_deaths, na.rm = TRUE),
             current_recovered = sum(confirmed_recovered, na.rm = TRUE)) %>% 
   right_join(distinct(covid19_global_full, country_region))
 covid19_global_current %>% View()
+
+# Look at histogram dist for map legend ranges
 options(scipen=999)
 covid19_global_current$current_cases %>% cut(8) %>% levels()
 covid19_global_current %>% 
@@ -116,8 +134,8 @@ covid19_global_current %>%
 covid19_global_full %>% 
   distinct(country_region)
 
-# New cases per day
-covid19_daily <- covid19_global_full %>% 
+# New cases per day ------------------------------------------------------------------------------
+covid19_global_daily <- covid19_global_full %>% 
   group_by(country_region, date) %>% 
   summarize(sum_cases = sum(confirmed_cases, na.rm = TRUE),
             sum_deaths = sum(confirmed_deaths, na.rm = TRUE),
@@ -127,6 +145,12 @@ covid19_daily <- covid19_global_full %>%
          diff_recovered = sum_recovered - lag(sum_recovered))
 covid19_daily %>% View()
 
+covid19_daily %>% 
+  filter(country_region == "France") %>% 
+  ggplot(aes(x = date, y = diff_cases)) + 
+  geom_col() + 
+  theme_light()
+
 # Map: Cases/deaths/recovered by country/region
 
 library(leaflet)
@@ -134,19 +158,7 @@ library(tigris)
 library(rnaturalearth)
 library(rnaturalearthdata)
 
-covid19_global_current <- covid19_global_current %>%
-  mutate(country_region = case_when(country_region == "Brunei" ~ "Brunei Darussalam",
-                                    country_region == "Cote d'Ivoire" ~ "Côte d'Ivoire",
-                                    country_region == "Czechia" ~ "Czech Republic",
-                                    country_region == "Korea, South" ~ "Republic of Korea",
-                                    country_region == "Laos" ~ "Lao PDR",
-                                    country_region == "North Macedonia" ~ "Macedonia",
-                                    country_region == "Russia" ~ "Russian Federation",
-                                    country_region == "Taiwan*" ~ "Taiwan",
-                                    country_region == "US" ~ "United States",
-                                    country_region == "West Bank and Gaza" ~ "Palestine",
-                                    TRUE ~ as.character(country_region)))
-
+# GEO JOINING -------------------------------------------
 ne_t <- ne_countries(type = "tiny_countries")
 ne_s <- ne_countries(type = "sovereignty")
 ne_u <- ne_countries(type = "map_units")
@@ -154,7 +166,7 @@ ne_c <- ne_countries()
 ne_t@data$name_long %>% View()
 ne_s@data$name_long
 ne_u@data$name_long %>% View()
-ne_c@data$name_long
+ne_c@data$name_long %>% View()
 
 library(maptools)
 class(ne_c@polygons )
@@ -210,7 +222,7 @@ ne_country_list <- data.frame(name_long = countries@data$name_long) %>%
   bind_cols(data.frame(name = countries@data$name))
 
 
-# Leaflet mapping
+# Leaflet mapping ---------------------
 covid19_global_geo@data$current_cases
 covid19_global_geo@data %>% 
   # filter(current_cases < 10000) %>%  
@@ -264,6 +276,8 @@ data <- read.table("https://www.r-graph-gallery.com/wp-content/uploads/2017/12/d
 head(data)
 
 
+### Testing other choropleth mapping options --------
+
 library(broom)
 library(mapproj)
 covid19_global_geo@data %>% View()
@@ -273,7 +287,7 @@ ggplot() +
   theme_void() +
   coord_map()
 
-### Testing other choropleth mapping options
+
 
 library(maps)
 world_map <- map("world", fill = TRUE, plot = FALSE)
