@@ -1,2 +1,4 @@
 .DS_Store
 .Rhistory
+db_update.R
+covid19_dashboard/config.yml
