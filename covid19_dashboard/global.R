@@ -12,56 +12,71 @@ library(rnaturalearthhires)
 library(leaflet)
 library(tigris)
 
+# Pull data from SQL db ----------------------------------------------------------------
+library(DBI)
+library(RPostgres)
+library(config)
+db <- config::get("database")
 
+con <- dbConnect(RPostgres::Postgres(),
+                 dbname = 'covid19_database',
+                 host = db$instance, 
+                 port = 5432, 
+                 user = db$username,
+                 password = db$pwd)
+covid19_global_full <- dbReadTable(con, "covid19_global_full")
+covid19_us_full <- dbReadTable(con, "covid19_us_full")
+dbDisconnect(con)
 
-# Read data
-covid19_global_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
-covid19_global_deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
-covid19_global_recovered <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
-covid19_us_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv")
-covid19_us_deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv")
-
-# Function to convert covid19 data to long format
-convert_covid_long <- function(data, col_name) {
-  data %>% 
-    rename(province_state = `Province/State`,
-           country_region = `Country/Region`) %>% 
-    pivot_longer(-c(province_state,country_region,Lat,Long),
-                 names_to = "date", 
-                 values_to = col_name)
-}
-
-# Global - Data ---------------------------------------------------------------------
-
-# Convert covid19 data to long format
-global_cases_long <- convert_covid_long(covid19_global_cases, "confirmed_cases")
-global_deaths_long <- convert_covid_long(covid19_global_deaths, "confirmed_deaths")
-global_recovered_long <- convert_covid_long(covid19_global_recovered, "confirmed_recovered")
-
-# Join cases, deaths, and recovered data
-covid19_global_full <- global_cases_long %>% 
-  full_join(global_deaths_long) %>% 
-  full_join(global_recovered_long) %>% 
-  mutate(date = mdy(date),
-         # Make edits to regions names for geo joining 
-         country_region = case_when(country_region == "Brunei" ~ "Brunei Darussalam",
-                                    country_region == "Cote d'Ivoire" ~ "Côte d'Ivoire",
-                                    country_region == "Czechia" ~ "Czech Republic",
-                                    country_region == "Korea, South" ~ "Republic of Korea",
-                                    country_region == "Laos" ~ "Lao PDR",
-                                    country_region == "North Macedonia" ~ "Macedonia",
-                                    country_region == "Russia" ~ "Russian Federation",
-                                    country_region == "Taiwan*" ~ "Taiwan",
-                                    country_region == "US" ~ "United States",
-                                    country_region == "West Bank and Gaza" ~ "Palestine",
-                                    # New names
-                                    country_region == "Burma" ~ "Myanmar", 
-                                    country_region == "Congo (Brazzaville)" ~ "Republic of Congo",
-                                    country_region == "Congo (Kinshasa)" ~ "Democratic Republic of the Congo",
-                                    # Greenland overrules denmark for geographic location
-                                    province_state == "Greenland" ~ "Greenland",
-                                    TRUE ~ country_region)
-         ) 
+# Read data from SQL db instead of direct from github
+# # Read data
+# covid19_global_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv")
+# covid19_global_deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv")
+# covid19_global_recovered <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv")
+# covid19_us_cases <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv")
+# covid19_us_deaths <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv")
+# 
+# # Function to convert covid19 data to long format
+# convert_covid_long <- function(data, col_name) {
+#   data %>% 
+#     rename(province_state = `Province/State`,
+#            country_region = `Country/Region`) %>% 
+#     pivot_longer(-c(province_state,country_region,Lat,Long),
+#                  names_to = "date", 
+#                  values_to = col_name)
+# }
+# 
+# # Global - Data ---------------------------------------------------------------------
+# 
+# # Convert covid19 data to long format
+# global_cases_long <- convert_covid_long(covid19_global_cases, "confirmed_cases")
+# global_deaths_long <- convert_covid_long(covid19_global_deaths, "confirmed_deaths")
+# global_recovered_long <- convert_covid_long(covid19_global_recovered, "confirmed_recovered")
+# 
+# # Join cases, deaths, and recovered data
+# covid19_global_full <- global_cases_long %>% 
+#   full_join(global_deaths_long) %>% 
+#   full_join(global_recovered_long) %>% 
+#   mutate(date = mdy(date),
+#          # Make edits to regions names for geo joining 
+#          country_region = case_when(country_region == "Brunei" ~ "Brunei Darussalam",
+#                                     country_region == "Cote d'Ivoire" ~ "Côte d'Ivoire",
+#                                     country_region == "Czechia" ~ "Czech Republic",
+#                                     country_region == "Korea, South" ~ "Republic of Korea",
+#                                     country_region == "Laos" ~ "Lao PDR",
+#                                     country_region == "North Macedonia" ~ "Macedonia",
+#                                     country_region == "Russia" ~ "Russian Federation",
+#                                     country_region == "Taiwan*" ~ "Taiwan",
+#                                     country_region == "US" ~ "United States",
+#                                     country_region == "West Bank and Gaza" ~ "Palestine",
+#                                     # New names
+#                                     country_region == "Burma" ~ "Myanmar", 
+#                                     country_region == "Congo (Brazzaville)" ~ "Republic of Congo",
+#                                     country_region == "Congo (Kinshasa)" ~ "Democratic Republic of the Congo",
+#                                     # Greenland overrules denmark for geographic location
+#                                     province_state == "Greenland" ~ "Greenland",
+#                                     TRUE ~ country_region)
+#          ) 
 
 # Total cases/deaths/recovered over time
 covid19_sum <- covid19_global_full %>% 
@@ -132,29 +147,29 @@ recovered_text <- paste(
   lapply(htmltools::HTML)
 
 ### US - Data ----------------------------------------------------------------------------
-# Convert US data to long format
-us_cases_long <- covid19_us_cases %>% 
-  rename(province_state = Province_State,
-         country_region = Country_Region,
-         Long = Long_) %>% 
-  select(-c(UID, iso2, iso3, code3, FIPS, Admin2, Combined_Key)) %>% 
-  pivot_longer(-c(province_state,country_region,Lat,Long),
-               names_to = "date", 
-               values_to = "confirmed_cases")
-
-us_deaths_long <- covid19_us_deaths %>% 
-  rename(province_state = Province_State,
-         country_region = Country_Region,
-         Long = Long_) %>% 
-  select(-c(UID, iso2, iso3, code3, FIPS, Admin2, Combined_Key)) %>% 
-  pivot_longer(-c(province_state,country_region,Lat,Long,Population),
-               names_to = "date", 
-               values_to = "confirmed_deaths")
-
-# Join cases, deaths, and recovered us data
-covid19_us_full <- us_cases_long %>% 
-  full_join(us_deaths_long) %>% 
-  mutate(date = mdy(date))
+# # Convert US data to long format
+# us_cases_long <- covid19_us_cases %>% 
+#   rename(province_state = Province_State,
+#          country_region = Country_Region,
+#          Long = Long_) %>% 
+#   select(-c(UID, iso2, iso3, code3, FIPS, Admin2, Combined_Key)) %>% 
+#   pivot_longer(-c(province_state,country_region,Lat,Long),
+#                names_to = "date", 
+#                values_to = "confirmed_cases")
+# 
+# us_deaths_long <- covid19_us_deaths %>% 
+#   rename(province_state = Province_State,
+#          country_region = Country_Region,
+#          Long = Long_) %>% 
+#   select(-c(UID, iso2, iso3, code3, FIPS, Admin2, Combined_Key)) %>% 
+#   pivot_longer(-c(province_state,country_region,Lat,Long,Population),
+#                names_to = "date", 
+#                values_to = "confirmed_deaths")
+# 
+# # Join cases, deaths, and recovered us data
+# covid19_us_full <- us_cases_long %>% 
+#   full_join(us_deaths_long) %>% 
+#   mutate(date = mdy(date))
 
 # List of confirmed cases/deaths/recovered by state
 covid19_us_current <- covid19_us_full %>% 
