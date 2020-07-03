@@ -80,28 +80,53 @@ us_tab <- tabPanel("U.S. Map",
 
 # Tab 3: Trends
 trends_tab <- tabPanel("Trends",
-                       # Global metrics over time
+                       # Daily metrics over time
                        column(width = 6,
-                              h2("Global"),
-                              br(), br(), br(), 
+                              # Global daily
+                              h2("Global Daily"),
+                              br(),
                               tabsetPanel(
-                                tabPanel("Cases", plotlyOutput("global_cases_over_time")),
-                                tabPanel("Deaths", plotlyOutput("global_deaths_over_time")),
-                                tabPanel("Recoveries", plotlyOutput("global_recovered_over_time"))
-                              )
-                              
-                       ),
-                       # US metrics over time
-                       column(width = 6,
-                              h3("Country/region"),
-                              selectInput("region_selection",
+                                id = "global_daily",
+                                tabPanel("Cases", value = "cases", plotlyOutput("global_daily_cases")),
+                                tabPanel("Deaths", value = "deaths", plotlyOutput("global_daily_deaths")),
+                                tabPanel("Recoveries", value = "recovered", plotlyOutput("global_daily_recoveries"))
+                              ),
+                              # Country/region (default: US) daily
+                              h2("Country/region Daily"),
+                              selectInput("region_selection_daily",
                                           "",
                                           choices = distinct(covid19_global_full, country_region),
                                           selected = "United States"),
                               tabsetPanel(
-                                tabPanel("Cases", plotlyOutput("region_cases_over_time")),
-                                tabPanel("Deaths", plotlyOutput("region_deaths_over_time")),
-                                tabPanel("Recoveries", plotlyOutput("region_recovered_over_time"))
+                                id = "region_daily",
+                                tabPanel("Cases", value = "cases", plotlyOutput("region_daily_cases")),
+                                tabPanel("Deaths", value = "deaths", plotlyOutput("region_daily_deaths")),
+                                tabPanel("Recoveries", value = "recovered", plotlyOutput("region_daily_recoveries"))
+                              )
+
+                       ),
+                       # Cumulative total metrics over time
+                       column(width = 6,
+                              # Global cumulative totals
+                              h2("Global Cumulative Total"),
+                              br(), #br(), br(),
+                              tabsetPanel(
+                                id = "global_total",
+                                tabPanel("Cases", value = "cases", plotlyOutput("global_total_cases")),
+                                tabPanel("Deaths", value = "deaths", plotlyOutput("global_total_deaths")),
+                                tabPanel("Recoveries", value = "recovered", plotlyOutput("global_total_recoveries"))
+                              ),
+                              # Country/region (default: US) cumulative totals
+                              h2("Country/region Cumulative Total"),
+                              selectInput("region_selection_total",
+                                          "",
+                                          choices = distinct(covid19_global_full, country_region),
+                                          selected = "United States"),
+                              tabsetPanel(
+                                id = "region_total",
+                                tabPanel("Cases", value = "cases", plotlyOutput("region_total_cases")),
+                                tabPanel("Deaths", value = "deaths", plotlyOutput("region_total_deaths")),
+                                tabPanel("Recoveries", value = "recovered", plotlyOutput("region_total_recoveries"))
                               )
                        )
 )

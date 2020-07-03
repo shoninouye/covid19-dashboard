@@ -1,6 +1,7 @@
 # Load packages
 library(tidyverse)
 library(lubridate)
+library(zoo)
 library(plotly)
 library(leaflet)
 
@@ -65,7 +66,7 @@ covid19_global_full %>% View()
 #   filter(date == "2020-01-22", is.na(confirmed_cases))
 
 ### Dashboard V1
-# Total cases/deaths/recovered over time
+# Total cases/deaths/recovered over time ----
 covid19_sum <- covid19_global_full %>% 
   group_by(date) %>% 
   summarize(sum_cases = sum(confirmed_cases, na.rm = TRUE),
@@ -135,7 +136,7 @@ covid19_global_full %>%
   distinct(country_region)
 
 # New cases per day ------------------------------------------------------------------------------
-covid19_global_daily <- covid19_global_full %>% 
+covid19_full_daily <- covid19_global_full %>% 
   group_by(country_region, date) %>% 
   summarize(sum_cases = sum(confirmed_cases, na.rm = TRUE),
             sum_deaths = sum(confirmed_deaths, na.rm = TRUE),
@@ -143,15 +144,99 @@ covid19_global_daily <- covid19_global_full %>%
   mutate(diff_cases = sum_cases - lag(sum_cases),
          diff_deaths = sum_deaths - lag(sum_deaths),
          diff_recovered = sum_recovered - lag(sum_recovered))
-covid19_daily %>% View()
 
-covid19_daily %>% 
-  filter(country_region == "France") %>% 
-  ggplot(aes(x = date, y = diff_cases)) + 
-  geom_col() + 
-  theme_light()
+covid19_global_daily <- covid19_full_daily %>% 
+  group_by(date) %>% 
+  summarize(sum_diff_cases = sum(diff_cases),
+         sum_diff_deaths = sum(diff_deaths),
+         sum_diff_recovered = sum(diff_recovered)) %>% 
+  mutate(rolling_7d_avg_cases = rollmean(sum_diff_cases, 7, align = "right", fill = NA),
+         rolling_7d_avg_deaths = rollmean(sum_diff_deaths, 7, align = "right", fill = NA),
+         rolling_7d_avg_recovered = rollmean(sum_diff_recovered, 7, align = "right", fill = NA))
 
-# Map: Cases/deaths/recovered by country/region
+global_daily_dict <- c("cases" = "sum_diff_cases",
+                       "deaths" = "sum_diff_deaths",
+                       "recovered" = "sum_diff_recovered")
+rolling_dict <- c("cases" = "rolling_7d_avg_cases",
+                  "deaths" = "rolling_7d_avg_deaths",
+                  "recovered" = "rolling_7d_avg_recovered")
+title_dict <- c("cases" = "Cases",
+                "deaths" = "Deaths",
+                "recovered" = "Recoveries")
+# world new daily cases
+plot_global_new_daily <- function(metric){
+  var <- global_daily_dict[metric]
+  var_rolling <- rolling_dict[metric]
+  
+  covid19_global_daily %>%
+    ggplot(aes(x = date,
+               y = !!ensym(var),
+               group = 1,
+               text = sprintf("New Daily %s: %s<br>Date: %s",
+                              title_dict[metric],
+                              scales::comma(!!ensym(var), accuracy = 1),
+                              date))) +
+    geom_col(aes(fill = !!ensym(var) < 0),
+             width = 0.75) +
+    geom_area(aes(x = date, y = !!ensym(var_rolling)),
+              fill = "#F8766D",
+              alpha = 0.25) +
+    geom_line(aes(x = date, y = !!ensym(var_rolling))) +
+    labs(title = sprintf("New global daily %s over time",
+                         tolower(title_dict[metric])),
+         x = "",
+         y = sprintf("Number of %s",
+                     tolower(title_dict[metric]))) +
+    theme_light() +
+    theme(legend.position = "none")
+}
+plotly_global_new_daily <- plot_global_new_daily("cases")
+
+ggplotly(plotly_global_new_daily, tooltip = "text") %>% 
+  style(hoverinfo = "none", traces = 2:3)
+
+# country new daily cases
+dict <- c("cases" = "diff_cases")
+# make a function using the bang bang operator
+# plotly_region_new_daily <- 
+  test_plot <- function(region = "France", metric = "cases"){
+  var <- dict[metric]
+      
+  covid19_full_daily %>% 
+  filter(country_region == region) %>%
+  mutate(rolling_7d_avg_cases = rollmean(diff_cases, 7, align = "right", fill = NA),
+         rolling_7d_avg_deaths = rollmean(diff_deaths, 7, align = "right", fill = NA),
+         rolling_7d_avg_recovered = rollmean(diff_recovered, 7, align = "right", fill = NA)) %>% 
+  ggplot(aes(x = date, 
+             y = !!ensym(var),
+             group = 1,
+             text = sprintf("New Daily Cases: %s<br>Date: %s", scales::comma(!!ensym(var), accuracy = 1), date)
+         )) + 
+  geom_col(aes(fill = !!ensym(var) < 0),
+           width = 0.75) + 
+  geom_area(aes(x = date, y = rolling_7d_avg_cases),
+            fill = "#F8766D",
+            alpha = 0.25) + 
+  geom_line(aes(x = date, y = rolling_7d_avg_cases)) +
+  labs(title = sprintf("%s new daily cases over time", "____"),
+       x = "",
+       y = "Number of cases") +
+  theme_light() + 
+  theme(legend.position = "none")
+  }
+
+france_plot <- test_plot("France", "cases")
+
+plotly_plot <- ggplotly(france_plot, tooltip = "text") %>% 
+  style(hoverinfo = "none", traces = 3:4)
+
+plotly_json(plotly_plot)
+
+dict <- c("x" = "a", "y" = "b")
+dict["x"]
+
+
+# Map: Cases/deaths/recovered by country/region ----
 
 library(leaflet)
 library(tigris)

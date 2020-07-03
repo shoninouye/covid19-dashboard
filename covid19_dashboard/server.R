@@ -220,115 +220,219 @@ shinyServer(function(input, output) {
   })
   
   # Tab 3: Trends ------------------------------------------------------------
-  # * Plotly global cases over time ------------------------------------------
-  output$global_cases_over_time <- renderPlotly({
-      plotly_covid19_sum <- covid19_sum %>% 
-      ggplot(aes(x = date, 
-                 y = sum_cases,
+
+  # * Plotly global daily cases/deaths/recoveries over time --------------------
+  global_daily_dict <- c("cases" = "sum_diff_cases",
+                         "deaths" = "sum_diff_deaths",
+                         "recovered" = "sum_diff_recovered")
+  rolling_dict <- c("cases" = "rolling_7d_avg_cases",
+                    "deaths" = "rolling_7d_avg_deaths",
+                    "recovered" = "rolling_7d_avg_recovered")
+  title_dict <- c("cases" = "Cases",
+                  "deaths" = "Deaths",
+                  "recovered" = "Recoveries")
+
+  plot_global_new_daily <- function(metric){
+    var <- global_daily_dict[metric]
+    var_rolling <- rolling_dict[metric]
+    
+    covid19_global_daily %>%
+      ggplot(aes(x = date,
+                 y = !!ensym(var),
                  group = 1,
-                 text = sprintf("Total Cases: %s<br>Date: %s", scales::comma(sum_cases, accuracy = 1), date))) +
-      geom_line(color = "dodgerblue", size = 1) + 
-      scale_y_continuous(labels = scales::comma) + 
-      theme_light() +
-      labs(title = "Global cases over time",
+                 text = sprintf("New Daily %s: %s<br>Date: %s",
+                                title_dict[metric],
+                                scales::comma(!!ensym(var), accuracy = 1),
+                                date))) +
+      geom_col(aes(fill = !!ensym(var) < 0),
+               width = 0.75) +
+      geom_area(aes(x = date, y = !!ensym(var_rolling)),
+                fill = "#F8766D",
+                alpha = 0.25) +
+      geom_line(aes(x = date, y = !!ensym(var_rolling))) +
+      labs(title = sprintf("New global daily %s over time",
+                           tolower(title_dict[metric])),
            x = "",
-           y = "Number of cases")
-    ggplotly(plotly_covid19_sum, tooltip = "text") %>% 
-      layout(hoverlabel=list(bgcolor="white"))
+           y = sprintf("Number of %s",
+                       tolower(title_dict[metric]))) +
+      theme_light() +
+      theme(legend.position = "none")
+  }
+  
+  plotly_global_new_daily <- reactive({
+    plot_global_new_daily(input$global_daily)
   })
   
-  # * Plotly global deaths over time ------------------------------------------
-  output$global_deaths_over_time <- renderPlotly({
-    plotly_covid19_sum <- covid19_sum %>% 
-      ggplot(aes(x = date, 
-                 y = sum_deaths,
+  output$global_daily_cases <- renderPlotly({
+    ggplotly(plotly_global_new_daily(), tooltip = "text") %>%
+      style(hoverlabel = list(bgcolor="white")) %>% 
+      style(hoverinfo = "none", 
+            traces = 2:3)
+  })
+  output$global_daily_deaths <- renderPlotly({
+    ggplotly(plotly_global_new_daily(), tooltip = "text") %>%
+      style(hoverlabel = list(bgcolor="white")) %>% 
+      style(hoverinfo = "none", 
+            traces = 2:3)
+  })
+  output$global_daily_recoveries <- renderPlotly({
+    ggplotly(plotly_global_new_daily(), tooltip = "text") %>%
+      style(hoverlabel = list(bgcolor="white")) %>% 
+      style(hoverinfo = "none", 
+            traces = 2:3)
+  })
+
+  # * Plotly region daily cases/deaths/recoveries over time --------------------
+  region_daily_dict <- c("cases" = "diff_cases",
+                         "deaths" = "diff_deaths",
+                         "recovered" = "diff_recovered")
+
+  plot_region_new_daily <- function(region, metric){
+    var <- region_daily_dict[metric]
+    var_rolling <- rolling_dict[metric]
+    
+    covid19_full_daily %>%
+      filter(country_region == region) %>%
+      mutate(rolling_7d_avg_cases = rollmean(diff_cases, 7, align = "right", fill = NA),
+             rolling_7d_avg_deaths = rollmean(diff_deaths, 7, align = "right", fill = NA),
+             rolling_7d_avg_recovered = rollmean(diff_recovered, 7, align = "right", fill = NA)) %>%
+      ggplot(aes(x = date,
+                 y = !!ensym(var),
                  group = 1,
-                 text = sprintf("Total Deaths: %s<br>Date: %s", scales::comma(sum_deaths, accuracy = 1), date))) +
-      geom_line(color = "dodgerblue", size = 1) + 
-      scale_y_continuous(labels = scales::comma) + 
-      theme_light() +
-      labs(title = "Global deaths over time",
+                 text = sprintf("New Daily %s: %s<br>Date: %s",
+                                title_dict[metric],
+                                scales::comma(!!ensym(var), accuracy = 1), date))) +
+      geom_col(aes(fill = !!ensym(var) < 0),
+               width = 0.75) +
+      geom_area(aes(x = date, y = !!ensym(var_rolling)),
+                fill = "#F8766D",
+                alpha = 0.25) +
+      geom_line(aes(x = date, y = !!ensym(var_rolling))) +
+      labs(title = sprintf("%s new daily %s over time",
+                           region,
+                           tolower(title_dict[metric])),
            x = "",
-           y = "Number of deaths")
-    ggplotly(plotly_covid19_sum, tooltip = "text") %>% 
-      layout(hoverlabel=list(bgcolor="white"))
+           y = sprintf("Number of %s",
+                       tolower(title_dict[metric]))) +
+      theme_light() +
+      theme(legend.position = "none")
+  }
+  
+  plotly_region_new_daily <- reactive({
+    plot_region_new_daily(input$region_selection_daily, input$region_daily)
   })
   
-  # * Plotly global recoveries over time -------------------------------------
-  output$global_recovered_over_time <- renderPlotly({
-    plotly_covid19_sum <- covid19_sum %>% 
-      ggplot(aes(x = date, 
-                 y = sum_recovered,
+  output$region_daily_cases <- renderPlotly({
+    ggplotly(plotly_region_new_daily(), tooltip = "text") %>%
+      style(hoverlabel = list(bgcolor="white")) %>% 
+      style(hoverinfo = "none", 
+            traces = 3)
+  })
+  output$region_daily_deaths <- renderPlotly({
+    ggplotly(plotly_region_new_daily(), tooltip = "text") %>%
+      style(hoverlabel = list(bgcolor="white")) %>% 
+      style(hoverinfo = "none", 
+            traces = 3)
+  })
+  output$region_daily_recoveries <- renderPlotly({
+    ggplotly(plotly_region_new_daily(), tooltip = "text") %>%
+      style(hoverlabel = list(bgcolor="white")) %>% 
+      style(hoverinfo = "none", 
+            traces = 3)
+  })
+
+  # * Plotly global total cases/deaths/recoveries over time ------------------------------------------
+  total_dict <- c("cases" = "sum_cases",
+                  "deaths" = "sum_deaths",
+                  "recovered" = "sum_recovered")
+  
+  plot_global_total <- function(metric){
+    var <- total_dict[metric]
+    
+    covid19_sum %>%
+      ggplot(aes(x = date,
+                 y = !!ensym(var),
                  group = 1,
-                 text = sprintf("Total Recoveries: %s<br>Date: %s", scales::comma(sum_recovered, accuracy = 1), date))) +
-      geom_line(color = "dodgerblue", size = 1) + 
-      scale_y_continuous(labels = scales::comma) + 
+                 text = sprintf("Total Cumulative %s: %s<br>Date: %s",
+                                title_dict[metric],
+                                scales::comma(!!ensym(var), accuracy = 1),
+                                date))) +
+      geom_line(color = "#F8766D", size = 1) +
+      scale_y_continuous(labels = scales::comma) +
       theme_light() +
-      labs(title = "Global recoveries over time",
+      labs(title = sprintf("Global cumulative total %s over time",
+                           tolower(title_dict[metric])),
            x = "",
-           y = "Number of recoveries")
-    ggplotly(plotly_covid19_sum, tooltip = "text") %>% 
-      layout(hoverlabel=list(bgcolor="white"))
+           y = sprintf("Number of %s",
+                       tolower(title_dict[metric])))
+  }
+  
+  plotly_global_total <- reactive({
+    plot_global_total(input$global_total)
   })
   
-  # * Plotly region data (reactive) ---------------------------------------
-  region_filtered <- reactive({
-    covid19_global_full %>% 
-      filter(country_region == input$region_selection) %>% 
-      group_by(date) %>% 
+  output$global_total_cases <- renderPlotly({
+    ggplotly(plotly_global_total(), tooltip = "text") %>%
+      layout(hoverlabel = list(bgcolor="white"))
+  })
+  output$global_total_deaths <- renderPlotly({
+    ggplotly(plotly_global_total(), tooltip = "text") %>%
+      layout(hoverlabel = list(bgcolor="white"))
+  })
+  output$global_total_recoveries <- renderPlotly({
+    ggplotly(plotly_global_total(), tooltip = "text") %>%
+      layout(hoverlabel = list(bgcolor="white"))
+  })
+
+
+  # * Plotly region total data (reactive) ---------------------------------------
+  region_total_filtered <- reactive({
+    covid19_global_full %>%
+      filter(country_region == input$region_selection_total) %>%
+      group_by(date) %>%
       summarize(sum_cases = sum(confirmed_cases, na.rm = TRUE),
                 sum_deaths = sum(confirmed_deaths, na.rm = TRUE),
                 sum_recovered = sum(confirmed_recovered, na.rm = TRUE))
   })
-  
-  # * Plotly region cases over time (reactive) ---------------------------------------
-  output$region_cases_over_time <- renderPlotly({
-    plotly_region <- region_filtered() %>%
-      ggplot(aes(x = date, 
-                 y = sum_cases,
+
+  # * Plotly region total cases/deaths/recoveries over time (reactive) ---------------------------------------
+  plot_region_total <- function(region, metric){
+    var <- total_dict[metric]
+    
+    region_total_filtered() %>%
+      ggplot(aes(x = date,
+                 y = !!ensym(var),
                  group = 1,
-                 text = sprintf("Total Cases: %s<br>Date: %s", scales::comma(sum_cases, accuracy = 1), date))) +
-      geom_line(color = "dodgerblue", size = 1) + 
-      scale_y_continuous(labels = scales::comma) + 
+                 text = sprintf("Total Cumulative %s: %s<br>Date: %s",
+                                title_dict[metric],
+                                scales::comma(!!ensym(var), accuracy = 1),
+                                date))) +
+      geom_line(color = "#F8766D", size = 1) +
+      scale_y_continuous(labels = scales::comma) +
       theme_light() +
-      labs(title = sprintf("%s cases over time", input$region_selection),
+      labs(title = sprintf("%s total cumulative %s over time",
+                           region,
+                           tolower(title_dict[metric])),
            x = "",
-           y = "Number of cases")
-    ggplotly(plotly_region, tooltip = "text") %>% 
-      layout(hoverlabel=list(bgcolor="white"))
+           y = sprintf("Number of %s",
+                       tolower(title_dict[metric])))
+  }
+  
+  plotly_region_total <- reactive({
+    plot_region_total(input$region_selection_total, input$region_total)
   })
   
-  # * Plotly region deaths over time (reactive) ---------------------------------------
-  output$region_deaths_over_time <- renderPlotly({
-    plotly_region <- region_filtered() %>%
-      ggplot(aes(x = date, 
-                 y = sum_deaths,
-                 group = 1,
-                 text = sprintf("Total Deaths: %s<br>Date: %s", scales::comma(sum_deaths, accuracy = 1), date))) +
-      geom_line(color = "dodgerblue", size = 1) + 
-      scale_y_continuous(labels = scales::comma) + 
-      theme_light() +
-      labs(title = sprintf("%s deaths over time", input$region_selection),
-           x = "",
-           y = "Number of deaths")
-    ggplotly(plotly_region, tooltip = "text") %>% 
-      layout(hoverlabel=list(bgcolor="white"))
+  output$region_total_cases <- renderPlotly({
+    ggplotly(plotly_region_total(), tooltip = "text") %>%
+      layout(hoverlabel = list(bgcolor="white"))
+  })
+  output$region_total_deaths <- renderPlotly({
+    ggplotly(plotly_region_total(), tooltip = "text") %>%
+      layout(hoverlabel = list(bgcolor="white"))
+  })
+  output$region_total_recoveries <- renderPlotly({
+    ggplotly(plotly_region_total(), tooltip = "text") %>%
+      layout(hoverlabel = list(bgcolor="white"))
   })
   
-  # * Plotly region recovered over time (reactive) ---------------------------------------
-  output$region_recovered_over_time <- renderPlotly({
-    plotly_region <- region_filtered() %>%
-      ggplot(aes(x = date, 
-                 y = sum_recovered,
-                 group = 1,
-                 text = sprintf("Total Recoveries: %s<br>Date: %s", scales::comma(sum_recovered, accuracy = 1), date))) +
-      geom_line(color = "dodgerblue", size = 1) + 
-      scale_y_continuous(labels = scales::comma) + 
-      theme_light() +
-      labs(title = sprintf("%s recovered over time", input$region_selection),
-           x = "",
-           y = "Number of recovered")
-    ggplotly(plotly_region, tooltip = "text") %>% 
-      layout(hoverlabel=list(bgcolor="white"))
-  })
 })

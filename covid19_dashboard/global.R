@@ -1,6 +1,7 @@
 # Load packages
 library(tidyverse)
 library(lubridate)
+library(zoo)
 library(plotly)
 library(leaflet)
 library(RColorBrewer)
@@ -100,6 +101,26 @@ covid19_global_total <- covid19_global_current %>%
   summarize(total_cases = sum(current_cases, na.rm = TRUE),
             total_deaths = sum(current_deaths, na.rm = TRUE),
             total_recovered = sum(current_recovered, na.rm = TRUE))
+
+# New daily cases/deaths/recovered for each country worldwide over time
+covid19_full_daily <- covid19_global_full %>% 
+  group_by(country_region, date) %>% 
+  summarize(sum_cases = sum(confirmed_cases, na.rm = TRUE),
+            sum_deaths = sum(confirmed_deaths, na.rm = TRUE),
+            sum_recovered = sum(confirmed_recovered, na.rm = TRUE)) %>% 
+  mutate(diff_cases = sum_cases - lag(sum_cases),
+         diff_deaths = sum_deaths - lag(sum_deaths),
+         diff_recovered = sum_recovered - lag(sum_recovered))
+
+# Worldwide new daily cases/deaths/recovered over time
+covid19_global_daily <- covid19_full_daily %>% 
+  group_by(date) %>% 
+  summarize(sum_diff_cases = sum(diff_cases),
+            sum_diff_deaths = sum(diff_deaths),
+            sum_diff_recovered = sum(diff_recovered)) %>% 
+  mutate(rolling_7d_avg_cases = rollmean(sum_diff_cases, 7, align = "right", fill = NA),
+         rolling_7d_avg_deaths = rollmean(sum_diff_deaths, 7, align = "right", fill = NA),
+         rolling_7d_avg_recovered = rollmean(sum_diff_recovered, 7, align = "right", fill = NA))
 
 ### Global - Map ---------------------------------------------------------------------
 
