@@ -252,6 +252,7 @@ shinyServer(function(input, output) {
       geom_line(aes(x = date, y = !!ensym(var_rolling))) +
       labs(title = sprintf("New global daily %s over time",
                            tolower(title_dict[metric])),
+           subtitle = "With 7-day rolling average",
            x = "",
            y = sprintf("Number of %s",
                        tolower(title_dict[metric]))) +
@@ -311,6 +312,7 @@ shinyServer(function(input, output) {
       labs(title = sprintf("%s new daily %s over time",
                            region,
                            tolower(title_dict[metric])),
+           subtitle = "With 7-day rolling average",
            x = "",
            y = sprintf("Number of %s",
                        tolower(title_dict[metric]))) +
@@ -362,6 +364,7 @@ shinyServer(function(input, output) {
       theme_light() +
       labs(title = sprintf("Global cumulative total %s over time",
                            tolower(title_dict[metric])),
+           subtitle = "With 7-day rolling average",
            x = "",
            y = sprintf("Number of %s",
                        tolower(title_dict[metric])))
@@ -413,6 +416,7 @@ shinyServer(function(input, output) {
       labs(title = sprintf("%s total cumulative %s over time",
                            region,
                            tolower(title_dict[metric])),
+           subtitle = "With 7-day rolling average",
            x = "",
            y = sprintf("Number of %s",
                        tolower(title_dict[metric])))

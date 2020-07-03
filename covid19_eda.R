@@ -199,7 +199,7 @@ ggplotly(plotly_global_new_daily, tooltip = "text") %>%
 dict <- c("cases" = "diff_cases")
 # make a function using the bang bang operator
 # plotly_region_new_daily <- 
-  test_plot <- function(region = "France", metric = "cases"){
+test_plot <- function(region = "France", metric = "cases"){
   var <- dict[metric]
       
   covid19_full_daily %>% 
@@ -223,12 +223,13 @@ dict <- c("cases" = "diff_cases")
        y = "Number of cases") +
   theme_light() + 
   theme(legend.position = "none")
-  }
+}
 
 france_plot <- test_plot("France", "cases")
 
 plotly_plot <- ggplotly(france_plot, tooltip = "text") %>% 
   style(hoverinfo = "none", traces = 3:4)
+plotly_plot 
 
 plotly_json(plotly_plot)
 
