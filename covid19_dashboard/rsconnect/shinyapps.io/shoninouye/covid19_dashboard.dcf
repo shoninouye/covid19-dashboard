@@ -5,6 +5,8 @@ account: shoninouye
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2309016
-bundleId: 3183299
+bundleId: 3349044
 url: https://shoninouye.shinyapps.io/covid19_dashboard/
-when: 1590289669.31596
+when: 1593799684.10795
+asMultiple: FALSE
+asStatic: FALSE
